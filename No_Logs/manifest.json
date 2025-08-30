@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Auto-Login",
+  "version": "2.0.0",
+  "description": "Enhanced auto-login extension with URL-based protection, self-healing mechanisms, and intelligent session detection.",
+
+  "permissions": [
+    "storage",
+    "scripting", 
+    "notifications",
+    "activeTab",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "https://lms.ssn.edu.in/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["https://lms.ssn.edu.in/*"],  
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Smart Auto-Login",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon.png"],
+      "matches": ["https://lms.ssn.edu.in/*"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
