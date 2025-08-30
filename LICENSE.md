@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 Smart Auto-Login Extension
+Copyright (c) 2025 Simiyon Vinscent Samuel L
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
