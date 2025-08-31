@@ -1,9 +1,3 @@
-
-// ===============================
-// SMART AUTO-LOGIN EXTENSION
-// Complete Content Script with all features
-// ===============================
-
 const LoginState = {
     IDLE: 'idle',
     ATTEMPTING: 'attempting', 
@@ -16,9 +10,9 @@ const LoginState = {
 };
 
 const CONFIG = {
-    MAX_BLOCK_TIME: 2 * 60 * 60 * 1000, // 2 hours auto-clear
+    MAX_BLOCK_TIME: 2 * 60 * 60 * 1000,
     SESSION_CHECK_DELAY: 1000,
-    MAX_ATTEMPTS: 3,
+    MAX_ATTEMPTS: 1,
     ATTEMPT_COOLDOWN: 5000,
     FORM_TIMEOUT: 15000,
     MONITOR_TIMEOUT: 30000
@@ -35,9 +29,11 @@ let state = {
     skipAutoLogin: false
 };
 
-// ===============================
-// URL TRANSITION DETECTION
-// ===============================
+// Check if current page is a login page
+function isLoginPage() {
+    const currentURL = window.location.href;
+    return currentURL.includes('/login') || currentURL.includes('/login/index.php');
+}
 
 function isLoginToMainPageTransition(currentURL, lastAttemptURL) {
     if (!lastAttemptURL) return false;
@@ -46,27 +42,17 @@ function isLoginToMainPageTransition(currentURL, lastAttemptURL) {
     const nowOnNonLoginPage = !currentURL.includes('/login');
     const urlsAreDifferent = currentURL !== lastAttemptURL;
 
-    if (wasOnLoginPage && nowOnNonLoginPage && urlsAreDifferent) {
-        return true;
-    }
-
-    return false;
+    return wasOnLoginPage && nowOnNonLoginPage && urlsAreDifferent;
 }
-
-// ===============================
-// ENHANCED INITIALIZATION WITH SELF-HEALING
-// ===============================
 
 async function initializeState() {
     return new Promise((resolve) => {
         chrome.storage.local.get(['lastAttemptURL', 'lastAttemptTime'], (data) => {
-
             const currentURL = window.location.href;
             const lastAttemptURL = data.lastAttemptURL || null;
             const lastAttemptTime = data.lastAttemptTime || null;
             const now = Date.now();
 
-            // PRIORITY 1: Login-to-main page transition (STRONGEST success indicator)
             if (isLoginToMainPageTransition(currentURL, lastAttemptURL)) {
                 clearURLBlock("Login-to-main page transition detected");
                 state.skipAutoLogin = false;
@@ -74,7 +60,6 @@ async function initializeState() {
                 return;
             }
 
-            // PRIORITY 2: General URL difference detection
             if (lastAttemptURL && currentURL !== lastAttemptURL) {
                 clearURLBlock("URL difference detected");
                 state.skipAutoLogin = false;
@@ -82,18 +67,14 @@ async function initializeState() {
                 return;
             }
 
-            // PRIORITY 3: Time-based expiration
             if (lastAttemptTime && (now - lastAttemptTime) > CONFIG.MAX_BLOCK_TIME) {
-                const hoursAgo = Math.round((now - lastAttemptTime) / (1000 * 60 * 60));
-                clearURLBlock(`Block expired (${hoursAgo} hours old)`);
+                clearURLBlock("Block expired");
                 state.skipAutoLogin = false;
                 resolve();
                 return;
             }
 
-            // PRIORITY 4: Session detection (same URL case)
             if (lastAttemptURL && currentURL === lastAttemptURL) {
-
                 setTimeout(() => {
                     checkIfAlreadyLoggedIn((isLoggedIn) => {
                         if (isLoggedIn) {
@@ -101,9 +82,10 @@ async function initializeState() {
                             state.currentState = LoginState.ALREADY_LOGGED_IN;
                             state.skipAutoLogin = true;
 
-                            // Show success popup
-                            showPopup("✅ Already logged in - no action needed!", true, true);
-
+                            // Only show popup on login pages
+                            if (isLoginPage()) {
+                                showPopup("✅ Already logged in - no action needed!", true, true);
+                            }
                         } else {
                             maintainURLBlock(lastAttemptURL, lastAttemptTime);
                             state.skipAutoLogin = true;
@@ -114,7 +96,6 @@ async function initializeState() {
                 return;
             }
 
-            // No blocking needed - fresh start
             state.lastAttemptURL = null;
             state.lastAttemptTime = null;
             state.currentState = LoginState.IDLE;
@@ -124,21 +105,13 @@ async function initializeState() {
     });
 }
 
-// ===============================
-// LOGGED-IN STATUS DETECTION
-// ===============================
-
 function checkIfAlreadyLoggedIn(callback) {
-
-    // Comprehensive Moodle logged-in detection
     const loggedInSelectors = [
-        // Standard Moodle elements
         '#user-menu', '.dashboard', '.logout', '[class*="dashboard"]',
         '[class*="profile"]', '[id*="dashboard"]', '[class*="user-menu"]',
         '.userpicture', '#page-wrapper', '.navbar-nav .dropdown',
         'a[href*="logout"]', '.block_myprofile', '.block_navigation',
         '.usermenu', '#page-header .userpicture',
-        // Additional Moodle indicators
         '.page-header-headings', '.breadcrumb', '.course-content',
         '#page-my-index', '.block_timeline', '.block_calendar_upcoming',
         '.block_recentlyaccesseditems', '.block_myoverview'
@@ -151,7 +124,6 @@ function checkIfAlreadyLoggedIn(callback) {
         return;
     }
 
-    // Check URL and form presence
     const currentURL = window.location.href;
     const isLoginPage = currentURL.includes('/login');
     const hasLoginForm = document.querySelector('input[type="password"]');
@@ -161,7 +133,6 @@ function checkIfAlreadyLoggedIn(callback) {
         return;
     }
 
-    // Check page content for logged-in indicators
     const title = document.title.toLowerCase();
     const bodyText = document.body.textContent.toLowerCase();
 
@@ -178,26 +149,18 @@ function checkIfAlreadyLoggedIn(callback) {
     callback(false);
 }
 
-// ===============================
-// STATE MANAGEMENT
-// ===============================
-
 function clearURLBlock(reason) {
-
     state.lastAttemptURL = null;
     state.lastAttemptTime = null;
     state.currentState = LoginState.IDLE;
 
-    chrome.storage.local.remove(['lastAttemptURL', 'lastAttemptTime'], () => {
-    });
+    chrome.storage.local.remove(['lastAttemptURL', 'lastAttemptTime']);
 }
 
 function maintainURLBlock(lastAttemptURL, lastAttemptTime) {
-
     state.lastAttemptURL = lastAttemptURL;
     state.lastAttemptTime = lastAttemptTime;
     state.currentState = LoginState.URL_BLOCKED;
-
 }
 
 function saveStateToStorage() {
@@ -206,15 +169,15 @@ function saveStateToStorage() {
         lastAttemptTime: state.lastAttemptTime
     };
 
-    chrome.storage.local.set(persistentData, () => {
-    });
+    chrome.storage.local.set(persistentData);
 }
 
-// ===============================
-// POPUP MANAGEMENT
-// ===============================
-
 function showPopup(reason, success = false, alreadyLoggedIn = false) {
+    // Only show popup if we're on a login page
+    if (!isLoginPage()) {
+        return;
+    }
+
     try {
         chrome.runtime.sendMessage({ 
             type: "showPopup", 
@@ -227,12 +190,9 @@ function showPopup(reason, success = false, alreadyLoggedIn = false) {
             noCredentials: state.currentState === LoginState.NO_CREDENTIALS
         });
     } catch (error) {
+        // Silent error handling
     }
 }
-
-// ===============================
-// LOGIN LOGIC
-// ===============================
 
 function isAutoLoginAllowed() {
     if (state.skipAutoLogin) {
@@ -264,37 +224,32 @@ function isAutoLoginAllowed() {
 function attemptLogin(username = "", password = "", isManualAttempt = false) {
     const currentURL = window.location.href;
 
-
-    // Validate credentials
     if (!username || !password) {
         handleNoCredentials();
         return;
     }
 
-    // Check if auto-login is allowed (for automatic attempts)
     if (!isManualAttempt && !isAutoLoginAllowed()) {
-
         if (state.currentState === LoginState.URL_BLOCKED) {
-            showPopup("Previous login attempt failed. Manual retry required.", false, false);
+            // Only show popup on login pages
+            if (isLoginPage()) {
+                showPopup("Previous login attempt failed. Manual retry required.", false, false);
+            }
         }
         return;
     }
 
-    // Additional checks
     if (!canAttemptLogin(isManualAttempt)) {
         return;
     }
 
-    // Update state
     state.currentState = isManualAttempt ? LoginState.MANUAL_RETRY : LoginState.ATTEMPTING;
     state.attemptCount++;
     state.lastAttemptTime = Date.now();
     state.lastAttemptURL = currentURL;
     state.credentials = { username, password };
 
-    // Save state
     saveStateToStorage();
-
 
     waitForLoginForm((userField, passField, submitBtn) => {
         try {
@@ -313,10 +268,12 @@ function attemptLogin(username = "", password = "", isManualAttempt = false) {
 }
 
 function handleNoCredentials() {
-
     state.currentState = LoginState.NO_CREDENTIALS;
-
-    showPopup("No login credentials found. Please enter your username and password.", false, false);
+    
+    // Only show popup on login pages
+    if (isLoginPage()) {
+        showPopup("No login credentials found. Please enter your username and password.", false, false);
+    }
 }
 
 function canAttemptLogin(isManualAttempt = false) {
@@ -334,10 +291,6 @@ function canAttemptLogin(isManualAttempt = false) {
 
     return true;
 }
-
-// ===============================
-// FORM HANDLING
-// ===============================
 
 function waitForLoginForm(callback, interval = 500, timeout = CONFIG.FORM_TIMEOUT) {
     const start = Date.now();
@@ -371,7 +324,6 @@ function setInputValue(input, value) {
     input.focus();
     input.value = value;
 
-    // Trigger events for form validation
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
     input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
@@ -379,32 +331,21 @@ function setInputValue(input, value) {
     input.blur();
 }
 
-// ===============================
-// LOGIN MONITORING
-// ===============================
-
 function monitorLoginResult() {
     let checkCount = 0;
     const maxChecks = 30;
     const originalURL = window.location.href;
 
-
     const monitor = setInterval(() => {
         checkCount++;
         const currentURL = window.location.href;
 
-        // SUCCESS: URL changed (especially login-to-main transition)
         if (currentURL !== originalURL) {
-
-            if (isLoginToMainPageTransition(currentURL, originalURL)) {
-            }
-
             clearInterval(monitor);
             handleLoginSuccess();
             return;
         }
 
-        // SUCCESS: Check if logged in elements appeared
         checkIfAlreadyLoggedIn((isLoggedIn) => {
             if (isLoggedIn) {
                 clearInterval(monitor);
@@ -413,7 +354,6 @@ function monitorLoginResult() {
             }
         });
 
-        // FAILURE: Error elements detected
         const errorElements = document.querySelectorAll(
             '.error, .alert-error, [class*="error"], [class*="invalid"], .login-error, .alert-danger, .loginfailures'
         );
@@ -424,7 +364,6 @@ function monitorLoginResult() {
             return;
         }
 
-        // FAILURE: Password field cleared (common failure indicator)
         if (checkCount > 8) {
             const passwordField = document.querySelector('input[type="password"]');
             if (passwordField && passwordField.value === '') {
@@ -434,7 +373,6 @@ function monitorLoginResult() {
             }
         }
 
-        // FAILURE: Still on same login page after reasonable time
         if (checkCount > 12 && currentURL === originalURL) {
             const passwordField = document.querySelector('input[type="password"]');
             if (passwordField) {
@@ -444,29 +382,17 @@ function monitorLoginResult() {
             }
         }
 
-        // TIMEOUT
         if (checkCount >= maxChecks) {
             clearInterval(monitor);
             handleLoginFailure("Login monitoring timeout");
             return;
         }
 
-        // Progress indicator
-        if (checkCount % 5 === 0) {
-        }
-
     }, 1000);
 }
 
-// ===============================
-// RESULT HANDLING
-// ===============================
-
 function handleLoginSuccess() {
-
     state.currentState = LoginState.SUCCESS;
-
-    // Clear all URL blocks on success
     clearURLBlock("Login succeeded - clearing all blocks");
 
     try {
@@ -477,39 +403,35 @@ function handleLoginSuccess() {
             attemptCount: state.attemptCount
         });
     } catch (error) {
+        // Silent error handling
     }
 }
 
 function handleLoginFailure(reason = "Unknown failure") {
-
     state.currentState = LoginState.FAILED;
-
-    // Keep URL block to prevent automatic retry on same page
-
-    showPopup(`Login failed: ${reason}. Please check your credentials and try again.`, false, false);
+    
+    // Only show popup on login pages
+    if (isLoginPage()) {
+        showPopup(`Login failed: ${reason}. Please check your credentials and try again.`, false, false);
+    }
 }
 
-// ===============================
-// MAIN PAGE LOAD HANDLER
-// ===============================
-
 async function handlePageLoad() {
+    // Only run auto-login logic on login pages
+    if (!isLoginPage()) {
+        return;
+    }
 
-    // Initialize with enhanced self-healing
     await initializeState();
     state.currentURL = window.location.href;
 
-    // Check if auto-login should be skipped
     if (state.skipAutoLogin) {
-
-        if (state.currentState === LoginState.URL_BLOCKED) {
+        if (state.currentState === LoginState.URL_BLOCKED && isLoginPage()) {
             showPopup("Previous login failed. Use popup to retry.", false, false);
         }
         return;
     }
 
-
-    // Small delay to ensure page is fully loaded
     setTimeout(() => {
         chrome.storage.local.get(["username", "password"], (data) => {
             if (data.username && data.password) {
@@ -521,12 +443,7 @@ async function handlePageLoad() {
     }, 1000);
 }
 
-// ===============================
-// MESSAGE HANDLING
-// ===============================
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-
     switch (message.type) {
         case "newCredentials":
             attemptLogin(message.credentials.username, message.credentials.password, true);
@@ -566,21 +483,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: false, error: "Unknown message type" });
     }
 
-    return true; // Keep message channel open for async responses
+    return true;
 });
 
-// ===============================
-// INITIALIZATION
-// ===============================
-
-// Initialize when page loads
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", handlePageLoad);
 } else {
     handlePageLoad();
 }
 
-// Handle SPA navigation
 let lastUrl = location.href;
 new MutationObserver(() => {
     const url = location.href;
@@ -589,4 +500,3 @@ new MutationObserver(() => {
         handlePageLoad();
     }
 }).observe(document, { subtree: true, childList: true });
-
