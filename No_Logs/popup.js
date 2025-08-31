@@ -1,4 +1,3 @@
-console.log("[Popup] Smart Auto-Login Extension - Popup Script with Auto-Refresh");
 
 // ===============================
 // SMART AUTO-LOGIN EXTENSION
@@ -28,7 +27,6 @@ let popupState = {
 // ===============================
 
 function initializePopup() {
-    console.log("[Popup] Initializing popup interface");
 
     // Get UI elements
     UI_ELEMENTS.saveBtn = document.getElementById("saveBtn");
@@ -48,7 +46,6 @@ function initializePopup() {
     // Setup event listeners
     setupEventListeners();
 
-    console.log("[Popup] Popup interface initialized");
 }
 
 function createControlButtons() {
@@ -106,10 +103,8 @@ function loadStoredCredentials() {
             UI_ELEMENTS.usernameField.value = data.username;
             UI_ELEMENTS.passwordField.value = data.password;
             updateStatus("📋 Stored credentials loaded", "info");
-            console.log("[Popup] Loaded stored credentials");
         } else {
             updateStatus("⚠️ No stored credentials found", "warning");
-            console.log("[Popup] No stored credentials");
         }
     });
 }
@@ -130,7 +125,6 @@ function getCurrentContentScriptState() {
             chrome.tabs.sendMessage(tabs[0].id, { type: "getState" }, (response) => {
                 if (chrome.runtime.lastError) {
                     const error = chrome.runtime.lastError.message;
-                    console.log("[Popup] Content script communication error:", error);
                     
                     if (error.includes("receiving end does not exist")) {
                         updateStatus("❌ Extension not active on this page. Please refresh.", "error");
@@ -141,7 +135,6 @@ function getCurrentContentScriptState() {
                 }
 
                 if (response) {
-                    console.log("[Popup] Content script state received:", response);
                     popupState.contentScriptState = response;
                     popupState.isURLBlocked = response.isUrlBlocked || false;
                     popupState.isAlreadyLoggedIn = response.isAlreadyLoggedIn || false;
@@ -154,14 +147,12 @@ function getCurrentContentScriptState() {
                 }
             });
         } catch (error) {
-            console.log("[Popup] Error communicating with content script:", error);
             updateStatus("❌ Error communicating with page. Please refresh.", "error");
         }
     });
 }
 
 function updateUIBasedOnState(state) {
-    console.log(`[Popup] Updating UI for state: ${state.state}`);
 
     switch (state.state) {
         case 'no_credentials':
@@ -424,16 +415,13 @@ function disableForm() {
 // ===============================
 
 function refreshCurrentPage() {
-    console.log("[Popup] Refreshing current page after credential update");
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs.length > 0) {
             chrome.tabs.reload(tabs[0].id, () => {
                 if (chrome.runtime.lastError) {
-                    console.log("[Popup] Error refreshing page:", chrome.runtime.lastError.message);
                     updateStatus("⚠️ Could not refresh page automatically", "warning");
                 } else {
-                    console.log("[Popup] Page refresh initiated successfully");
                     updateStatus("🔄 Page refreshing to test new credentials...", "info");
 
                     // Close popup after refresh
@@ -441,7 +429,6 @@ function refreshCurrentPage() {
                 }
             });
         } else {
-            console.log("[Popup] No active tab found for refresh");
             updateStatus("❌ Could not refresh page - no active tab", "error");
         }
     });
@@ -480,7 +467,6 @@ function performLogin() {
             return;
         }
 
-        console.log("[Popup] Credentials saved successfully");
 
         // ENHANCED: Different behavior for already logged in users
         if (popupState.isAlreadyLoggedIn) {
@@ -531,7 +517,6 @@ function sendLoginRequest(username, password) {
                 }
             });
         } catch (error) {
-            console.log("[Popup] Error sending login request:", error);
             updateStatus("❌ Error communicating with page. Please refresh.", "error");
             enableForm();
         }
@@ -558,7 +543,6 @@ function resetURLBlock() {
                     }
                 });
             } catch (error) {
-                console.log("[Popup] Error resetting URL block:", error);
                 updateStatus("❌ Error communicating with page. Please refresh.", "error");
             }
         }
@@ -594,7 +578,6 @@ function forceLogin() {
                         }
                     });
                 } catch (error) {
-                    console.log("[Popup] Error forcing login:", error);
                     updateStatus("❌ Error communicating with page. Please refresh.", "error");
                     enableForm();
                 }
@@ -738,7 +721,6 @@ function setupEventListeners() {
 // ===============================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("[Popup] Received background message:", message);
 
     if (message.type === "updateState" || message.alreadyLoggedIn || message.noCredentials) {
         // Refresh state when background script sends updates
@@ -755,4 +737,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', initializePopup);
 
-console.log("[Popup] Smart Auto-Login Extension - Auto-Refresh Popup Script Ready");

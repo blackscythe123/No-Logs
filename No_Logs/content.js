@@ -1,4 +1,3 @@
-console.log("[AutoLogin] Complete Smart Auto-Login Extension - Content Script Loaded");
 
 // ===============================
 // SMART AUTO-LOGIN EXTENSION
@@ -48,9 +47,6 @@ function isLoginToMainPageTransition(currentURL, lastAttemptURL) {
     const urlsAreDifferent = currentURL !== lastAttemptURL;
 
     if (wasOnLoginPage && nowOnNonLoginPage && urlsAreDifferent) {
-        console.log(`[AutoLogin] 🎯 LOGIN-TO-MAIN transition detected!`);
-        console.log(`[AutoLogin] FROM: ${lastAttemptURL}`);
-        console.log(`[AutoLogin] TO: ${currentURL}`);
         return true;
     }
 
@@ -64,7 +60,6 @@ function isLoginToMainPageTransition(currentURL, lastAttemptURL) {
 async function initializeState() {
     return new Promise((resolve) => {
         chrome.storage.local.get(['lastAttemptURL', 'lastAttemptTime'], (data) => {
-            console.log("[AutoLogin] 📋 Loading persistent state:", data);
 
             const currentURL = window.location.href;
             const lastAttemptURL = data.lastAttemptURL || null;
@@ -73,7 +68,6 @@ async function initializeState() {
 
             // PRIORITY 1: Login-to-main page transition (STRONGEST success indicator)
             if (isLoginToMainPageTransition(currentURL, lastAttemptURL)) {
-                console.log("[AutoLogin] 🔧 SELF-HEALING (LOGIN-TO-MAIN): Strong success indicator!");
                 clearURLBlock("Login-to-main page transition detected");
                 state.skipAutoLogin = false;
                 resolve();
@@ -82,9 +76,6 @@ async function initializeState() {
 
             // PRIORITY 2: General URL difference detection
             if (lastAttemptURL && currentURL !== lastAttemptURL) {
-                console.log("[AutoLogin] 🔧 SELF-HEALING (URL): Different URL detected");
-                console.log(`[AutoLogin] FROM: ${lastAttemptURL}`);
-                console.log(`[AutoLogin] TO: ${currentURL}`);
                 clearURLBlock("URL difference detected");
                 state.skipAutoLogin = false;
                 resolve();
@@ -94,7 +85,6 @@ async function initializeState() {
             // PRIORITY 3: Time-based expiration
             if (lastAttemptTime && (now - lastAttemptTime) > CONFIG.MAX_BLOCK_TIME) {
                 const hoursAgo = Math.round((now - lastAttemptTime) / (1000 * 60 * 60));
-                console.log(`[AutoLogin] 🔧 SELF-HEALING (TIME): Block is ${hoursAgo} hours old`);
                 clearURLBlock(`Block expired (${hoursAgo} hours old)`);
                 state.skipAutoLogin = false;
                 resolve();
@@ -103,12 +93,10 @@ async function initializeState() {
 
             // PRIORITY 4: Session detection (same URL case)
             if (lastAttemptURL && currentURL === lastAttemptURL) {
-                console.log("[AutoLogin] 🔍 Same URL detected - checking if already logged in...");
 
                 setTimeout(() => {
                     checkIfAlreadyLoggedIn((isLoggedIn) => {
                         if (isLoggedIn) {
-                            console.log("[AutoLogin] 🔧 SELF-HEALING (SESSION): Already logged in detected");
                             clearURLBlock("Already logged in on same URL");
                             state.currentState = LoginState.ALREADY_LOGGED_IN;
                             state.skipAutoLogin = true;
@@ -117,7 +105,6 @@ async function initializeState() {
                             showPopup("✅ Already logged in - no action needed!", true, true);
 
                         } else {
-                            console.log("[AutoLogin] 🛡️ Not logged in - maintaining URL block");
                             maintainURLBlock(lastAttemptURL, lastAttemptTime);
                             state.skipAutoLogin = true;
                         }
@@ -128,7 +115,6 @@ async function initializeState() {
             }
 
             // No blocking needed - fresh start
-            console.log("[AutoLogin] ✅ No URL blocking - ready for auto-login");
             state.lastAttemptURL = null;
             state.lastAttemptTime = null;
             state.currentState = LoginState.IDLE;
@@ -143,7 +129,6 @@ async function initializeState() {
 // ===============================
 
 function checkIfAlreadyLoggedIn(callback) {
-    console.log("[AutoLogin] 🔍 Checking login status...");
 
     // Comprehensive Moodle logged-in detection
     const loggedInSelectors = [
@@ -162,7 +147,6 @@ function checkIfAlreadyLoggedIn(callback) {
     const loggedInElements = document.querySelectorAll(loggedInSelectors.join(', '));
 
     if (loggedInElements.length > 0) {
-        console.log(`[AutoLogin] ✅ Found logged-in elements: ${loggedInElements.length}`);
         callback(true);
         return;
     }
@@ -173,7 +157,6 @@ function checkIfAlreadyLoggedIn(callback) {
     const hasLoginForm = document.querySelector('input[type="password"]');
 
     if (!isLoginPage && !hasLoginForm) {
-        console.log("[AutoLogin] ✅ Not on login page and no login form - likely logged in");
         callback(true);
         return;
     }
@@ -188,12 +171,10 @@ function checkIfAlreadyLoggedIn(callback) {
     );
 
     if (hasLoggedInContent) {
-        console.log("[AutoLogin] ✅ Found logged-in content indicators");
         callback(true);
         return;
     }
 
-    console.log("[AutoLogin] ❌ No logged-in indicators found - user needs to login");
     callback(false);
 }
 
@@ -202,28 +183,21 @@ function checkIfAlreadyLoggedIn(callback) {
 // ===============================
 
 function clearURLBlock(reason) {
-    console.log(`[AutoLogin] 🧹 Clearing URL block - Reason: ${reason}`);
 
     state.lastAttemptURL = null;
     state.lastAttemptTime = null;
     state.currentState = LoginState.IDLE;
 
     chrome.storage.local.remove(['lastAttemptURL', 'lastAttemptTime'], () => {
-        console.log("[AutoLogin] ✅ URL block cleared from storage");
-        console.log("[AutoLogin] 🔓 Auto-login re-enabled for future visits");
     });
 }
 
 function maintainURLBlock(lastAttemptURL, lastAttemptTime) {
-    console.log("[AutoLogin] 🛡️ Maintaining URL block");
-    console.log(`[AutoLogin] Blocked URL: ${lastAttemptURL}`);
 
     state.lastAttemptURL = lastAttemptURL;
     state.lastAttemptTime = lastAttemptTime;
     state.currentState = LoginState.URL_BLOCKED;
 
-    const timeAgo = lastAttemptTime ? Math.round((Date.now() - lastAttemptTime) / (1000 * 60)) : 0;
-    console.log(`[AutoLogin] Block age: ${timeAgo} minutes`);
 }
 
 function saveStateToStorage() {
@@ -233,7 +207,6 @@ function saveStateToStorage() {
     };
 
     chrome.storage.local.set(persistentData, () => {
-        console.log("[AutoLogin] 💾 Saved state:", persistentData);
     });
 }
 
@@ -253,9 +226,7 @@ function showPopup(reason, success = false, alreadyLoggedIn = false) {
             urlBlocked: state.currentState === LoginState.URL_BLOCKED,
             noCredentials: state.currentState === LoginState.NO_CREDENTIALS
         });
-        console.log(`[AutoLogin] 📋 Showing popup: ${reason}`);
     } catch (error) {
-        console.log("[AutoLogin] Could not show popup:", error.message);
     }
 }
 
@@ -265,17 +236,14 @@ function showPopup(reason, success = false, alreadyLoggedIn = false) {
 
 function isAutoLoginAllowed() {
     if (state.skipAutoLogin) {
-        console.log("[AutoLogin] ⏸️ Auto-login skipped by flag");
         return false;
     }
 
     if (state.currentState === LoginState.ALREADY_LOGGED_IN) {
-        console.log("[AutoLogin] ✅ Already logged in - no need for auto-login");
         return false;
     }
 
     if (state.currentState === LoginState.URL_BLOCKED) {
-        console.log("[AutoLogin] 🛡️ URL blocked - manual retry required");
         return false;
     }
 
@@ -283,34 +251,28 @@ function isAutoLoginAllowed() {
     const lastAttemptURL = state.lastAttemptURL;
 
     if (!lastAttemptURL) {
-        console.log("[AutoLogin] ✅ No previous attempt - allowed");
         return true;
     }
 
     if (currentURL !== lastAttemptURL) {
-        console.log("[AutoLogin] ✅ Different URL - allowed");
         return true;
     }
 
-    console.log("[AutoLogin] ❌ Same URL as failed attempt - blocked");
     return false;
 }
 
 function attemptLogin(username = "", password = "", isManualAttempt = false) {
     const currentURL = window.location.href;
 
-    console.log(`[AutoLogin] 🚀 Login attempt - Manual: ${isManualAttempt}, URL: ${currentURL}`);
 
     // Validate credentials
     if (!username || !password) {
-        console.log("[AutoLogin] ❌ Missing credentials");
         handleNoCredentials();
         return;
     }
 
     // Check if auto-login is allowed (for automatic attempts)
     if (!isManualAttempt && !isAutoLoginAllowed()) {
-        console.log("[AutoLogin] 🚫 Auto-login not allowed");
 
         if (state.currentState === LoginState.URL_BLOCKED) {
             showPopup("Previous login attempt failed. Manual retry required.", false, false);
@@ -333,7 +295,6 @@ function attemptLogin(username = "", password = "", isManualAttempt = false) {
     // Save state
     saveStateToStorage();
 
-    console.log(`[AutoLogin] 🎯 Starting login (${state.attemptCount}/${state.maxAttempts})`);
 
     waitForLoginForm((userField, passField, submitBtn) => {
         try {
@@ -343,18 +304,15 @@ function attemptLogin(username = "", password = "", isManualAttempt = false) {
             setTimeout(() => {
                 submitBtn.click();
                 monitorLoginResult();
-                console.log("[AutoLogin] 📤 Form submitted, monitoring result...");
             }, 100);
 
         } catch (error) {
-            console.error("[AutoLogin] ❌ Login error:", error);
             handleLoginFailure("Login attempt failed: " + error.message);
         }
     });
 }
 
 function handleNoCredentials() {
-    console.log("[AutoLogin] ⚠️ No stored credentials found");
 
     state.currentState = LoginState.NO_CREDENTIALS;
 
@@ -363,17 +321,14 @@ function handleNoCredentials() {
 
 function canAttemptLogin(isManualAttempt = false) {
     if (isManualAttempt) {
-        console.log("[AutoLogin] ✅ Manual attempt - always allowed");
         return true;
     }
 
     if (state.currentState === LoginState.ATTEMPTING) {
-        console.log("[AutoLogin] ❌ Already attempting login");
         return false;
     }
 
     if (state.lastAttemptTime && (Date.now() - state.lastAttemptTime) < CONFIG.ATTEMPT_COOLDOWN) {
-        console.log("[AutoLogin] ❌ Rate limited - too soon since last attempt");
         return false;
     }
 
@@ -400,14 +355,12 @@ function waitForLoginForm(callback, interval = 500, timeout = CONFIG.FORM_TIMEOU
 
         if (userField && passField && submitBtn) {
             clearInterval(timer);
-            console.log("[AutoLogin] ✅ Login form elements found");
             callback(userField, passField, submitBtn);
             return;
         }
 
         if (Date.now() - start > timeout) {
             clearInterval(timer);
-            console.log("[AutoLogin] ⏰ Login form timeout");
             handleLoginFailure("Login form elements not found within timeout");
             return;
         }
@@ -435,7 +388,6 @@ function monitorLoginResult() {
     const maxChecks = 30;
     const originalURL = window.location.href;
 
-    console.log(`[AutoLogin] 👀 Monitoring login from: ${originalURL}`);
 
     const monitor = setInterval(() => {
         checkCount++;
@@ -443,12 +395,8 @@ function monitorLoginResult() {
 
         // SUCCESS: URL changed (especially login-to-main transition)
         if (currentURL !== originalURL) {
-            console.log(`[AutoLogin] ✅ LOGIN SUCCESS - URL changed!`);
-            console.log(`[AutoLogin] FROM: ${originalURL}`);
-            console.log(`[AutoLogin] TO: ${currentURL}`);
 
             if (isLoginToMainPageTransition(currentURL, originalURL)) {
-                console.log(`[AutoLogin] 🎯 Perfect! Login-to-main page transition confirmed`);
             }
 
             clearInterval(monitor);
@@ -459,7 +407,6 @@ function monitorLoginResult() {
         // SUCCESS: Check if logged in elements appeared
         checkIfAlreadyLoggedIn((isLoggedIn) => {
             if (isLoggedIn) {
-                console.log("[AutoLogin] ✅ LOGIN SUCCESS - logged in elements detected");
                 clearInterval(monitor);
                 handleLoginSuccess();
                 return;
@@ -472,7 +419,6 @@ function monitorLoginResult() {
         );
 
         if (errorElements.length > 0) {
-            console.log("[AutoLogin] ❌ LOGIN FAILED - error elements found");
             clearInterval(monitor);
             handleLoginFailure("Invalid credentials detected");
             return;
@@ -482,7 +428,6 @@ function monitorLoginResult() {
         if (checkCount > 8) {
             const passwordField = document.querySelector('input[type="password"]');
             if (passwordField && passwordField.value === '') {
-                console.log("[AutoLogin] ❌ LOGIN FAILED - password field cleared");
                 clearInterval(monitor);
                 handleLoginFailure("Login failed - password field was cleared");
                 return;
@@ -493,7 +438,6 @@ function monitorLoginResult() {
         if (checkCount > 12 && currentURL === originalURL) {
             const passwordField = document.querySelector('input[type="password"]');
             if (passwordField) {
-                console.log("[AutoLogin] ❌ LOGIN FAILED - still on login page");
                 clearInterval(monitor);
                 handleLoginFailure("Still on login page - credentials likely incorrect");
                 return;
@@ -502,7 +446,6 @@ function monitorLoginResult() {
 
         // TIMEOUT
         if (checkCount >= maxChecks) {
-            console.log("[AutoLogin] ⏰ LOGIN TIMEOUT");
             clearInterval(monitor);
             handleLoginFailure("Login monitoring timeout");
             return;
@@ -510,7 +453,6 @@ function monitorLoginResult() {
 
         // Progress indicator
         if (checkCount % 5 === 0) {
-            console.log(`[AutoLogin] Monitoring... ${checkCount}/${maxChecks}`);
         }
 
     }, 1000);
@@ -521,7 +463,6 @@ function monitorLoginResult() {
 // ===============================
 
 function handleLoginSuccess() {
-    console.log("[AutoLogin] 🎉 LOGIN SUCCESS CONFIRMED!");
 
     state.currentState = LoginState.SUCCESS;
 
@@ -535,19 +476,15 @@ function handleLoginSuccess() {
             clearedBlocks: true,
             attemptCount: state.attemptCount
         });
-        console.log("[AutoLogin] 📤 Notified background script of success");
     } catch (error) {
-        console.log("[AutoLogin] Could not notify background script");
     }
 }
 
 function handleLoginFailure(reason = "Unknown failure") {
-    console.log(`[AutoLogin] ❌ LOGIN FAILED: ${reason}`);
 
     state.currentState = LoginState.FAILED;
 
     // Keep URL block to prevent automatic retry on same page
-    console.log(`[AutoLogin] 🛡️ Maintaining URL block for: ${state.lastAttemptURL}`);
 
     showPopup(`Login failed: ${reason}. Please check your credentials and try again.`, false, false);
 }
@@ -557,7 +494,6 @@ function handleLoginFailure(reason = "Unknown failure") {
 // ===============================
 
 async function handlePageLoad() {
-    console.log(`[AutoLogin] 📄 Page loaded: ${window.location.href}`);
 
     // Initialize with enhanced self-healing
     await initializeState();
@@ -565,7 +501,6 @@ async function handlePageLoad() {
 
     // Check if auto-login should be skipped
     if (state.skipAutoLogin) {
-        console.log("[AutoLogin] ⏸️ Auto-login skipped");
 
         if (state.currentState === LoginState.URL_BLOCKED) {
             showPopup("Previous login failed. Use popup to retry.", false, false);
@@ -573,16 +508,13 @@ async function handlePageLoad() {
         return;
     }
 
-    console.log("[AutoLogin] ✅ Auto-login allowed - starting...");
 
     // Small delay to ensure page is fully loaded
     setTimeout(() => {
         chrome.storage.local.get(["username", "password"], (data) => {
             if (data.username && data.password) {
-                console.log("[AutoLogin] 🔑 Found credentials - attempting auto-login");
                 attemptLogin(data.username, data.password, false);
             } else {
-                console.log("[AutoLogin] ⚠️ No stored credentials");
                 handleNoCredentials();
             }
         });
@@ -594,11 +526,9 @@ async function handlePageLoad() {
 // ===============================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log(`[AutoLogin] 📨 Received message: ${message.type}`);
 
     switch (message.type) {
         case "newCredentials":
-            console.log("[AutoLogin] 🔑 Manual login requested");
             attemptLogin(message.credentials.username, message.credentials.password, true);
             sendResponse({ success: true, message: "Manual login attempt started" });
             break;
@@ -616,19 +546,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 skipAutoLogin: state.skipAutoLogin,
                 blockAge: state.lastAttemptTime ? Math.round((Date.now() - state.lastAttemptTime) / (1000 * 60)) : 0
             };
-            console.log("[AutoLogin] 📊 Sending state:", response);
             sendResponse(response);
             break;
 
         case "resetURLBlock":
-            console.log("[AutoLogin] 🔧 Manual URL block reset requested");
             clearURLBlock("Manual reset requested");
             state.skipAutoLogin = false;
             sendResponse({ success: true, message: "URL block reset successfully" });
             break;
 
         case "forceAutoLogin":
-            console.log("[AutoLogin] 🚀 Force auto-login requested");
             clearURLBlock("Force auto-login requested");
             state.skipAutoLogin = false;
             handlePageLoad();
@@ -636,7 +563,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
 
         default:
-            console.log("[AutoLogin] ⚠️ Unknown message type:", message.type);
             sendResponse({ success: false, error: "Unknown message type" });
     }
 
@@ -660,10 +586,7 @@ new MutationObserver(() => {
     const url = location.href;
     if (url !== lastUrl) {
         lastUrl = url;
-        console.log(`[AutoLogin] 🔄 SPA navigation detected: ${url}`);
         handlePageLoad();
     }
 }).observe(document, { subtree: true, childList: true });
 
-console.log("[AutoLogin] 🎯 Smart Auto-Login Extension - Content Script Initialized");
-console.log("[AutoLogin] 🛡️ Features: URL Protection, Self-Healing, Session Detection, No-Credential Handling");

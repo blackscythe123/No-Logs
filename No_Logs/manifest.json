@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Smart Auto-Login",
+  "name": "No Logs",
   "version": "2.0.0",
-  "description": "Enhanced auto-login extension with URL-based protection, self-healing mechanisms, and intelligent session detection.",
+  "description": "No Logs is a privacy-focused Chrome extension that provides secure automatic login functionality without storing any logs or tracking user activity. Built for students and privacy-conscious users who want convenience without compromising security.",
 
   "permissions": [
     "storage",
@@ -30,7 +30,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Smart Auto-Login",
+    "default_title": "No Logs",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

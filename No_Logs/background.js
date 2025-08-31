@@ -1,4 +1,3 @@
-console.log("[Background] Smart Auto-Login Extension - Background Script Loaded");
 
 // ===============================
 // SMART AUTO-LOGIN EXTENSION
@@ -16,7 +15,6 @@ const backgroundState = {
 // ===============================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("[Background] Received message:", message.type, "from:", sender.tab ? `tab ${sender.tab.id}` : "popup");
 
     try {
         switch (message.type) {
@@ -47,17 +45,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             case "clearTabData":
                 if (sender.tab) {
                     backgroundState.loginAttempts.delete(sender.tab.id);
-                    console.log(`[Background] Cleared data for tab ${sender.tab.id}`);
                 }
                 sendResponse({ success: true });
                 break;
 
             default:
-                console.log("[Background] Unknown message type:", message.type);
                 sendResponse({ success: false, error: "Unknown message type" });
         }
     } catch (error) {
-        console.error("[Background] Error handling message:", error);
+        // console.error("[Background] Error handling message:", error);
         sendResponse({ success: false, error: error.message });
     }
 
@@ -70,7 +66,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function handleShowPopupRequest(message, sender) {
     if (!sender.tab) {
-        console.log("[Background] No tab info in popup request");
         return;
     }
 
@@ -83,7 +78,6 @@ function handleShowPopupRequest(message, sender) {
         .filter(key => Date.now() - parseInt(key.split('_')[1]) < 3000);
 
     if (recentRequests.length > 0) {
-        console.log("[Background] Ignoring duplicate popup request for tab", tabId);
         return;
     }
 
@@ -112,8 +106,6 @@ function handleShowPopupRequest(message, sender) {
 
     backgroundState.loginAttempts.set(tabId, attemptInfo);
 
-    console.log(`[Background] Processing popup request for tab ${tabId}`);
-    console.log(`[Background] Reason: ${message.reason || 'General request'}`);
 
     // Show appropriate badge and notification
     if (message.success) {
@@ -129,7 +121,6 @@ function handleShowPopupRequest(message, sender) {
     // Try to open popup automatically
     try {
         chrome.action.openPopup().catch(error => {
-            console.log("[Background] Could not auto-open popup:", error.message);
 
             // Fallback: Show notification
             if (chrome.notifications) {
@@ -137,7 +128,6 @@ function handleShowPopupRequest(message, sender) {
             }
         });
     } catch (error) {
-        console.log("[Background] Popup opening not supported");
         if (chrome.notifications) {
             showFallbackNotification(message.reason || 'Click extension icon for login options');
         }
@@ -163,8 +153,6 @@ function handleLoginSuccess(message, sender) {
 
     const tabId = sender.tab.id;
 
-    console.log(`[Background] Login success for tab ${tabId}`);
-    console.log(`[Background] URL: ${message.url || sender.tab.url}`);
 
     // Update tracking
     const attemptInfo = backgroundState.loginAttempts.get(tabId) || { 
@@ -187,7 +175,6 @@ function handleLoginSuccess(message, sender) {
         chrome.action.setBadgeText({ text: "" });
     }, 5000);
 
-    console.log("[Background] Login success processed");
 }
 
 function handleLoginFailure(message, sender) {
@@ -195,8 +182,6 @@ function handleLoginFailure(message, sender) {
 
     const tabId = sender.tab.id;
 
-    console.log(`[Background] Login failure for tab ${tabId}`);
-    console.log(`[Background] Reason: ${message.reason || 'Unknown'}`);
 
     // Update tracking
     const attemptInfo = backgroundState.loginAttempts.get(tabId) || { 
@@ -218,7 +203,6 @@ function handleLoginFailure(message, sender) {
     // Set error badge
     setBadgeError(tabId, attemptInfo.count);
 
-    console.log("[Background] Login failure processed");
 }
 
 // ===============================
@@ -228,26 +212,22 @@ function handleLoginFailure(message, sender) {
 function setBadgeSuccess(tabId) {
     chrome.action.setBadgeText({ text: "✓" });
     chrome.action.setBadgeBackgroundColor({ color: "#4caf50" });
-    console.log(`[Background] Set success badge for tab ${tabId}`);
 }
 
 function setBadgeError(tabId, count = null) {
     const text = count ? count.toString() : "!";
     chrome.action.setBadgeText({ text: text });
     chrome.action.setBadgeBackgroundColor({ color: "#f44336" });
-    console.log(`[Background] Set error badge "${text}" for tab ${tabId}`);
 }
 
 function setBadgeWarning(tabId) {
     chrome.action.setBadgeText({ text: "?" });
     chrome.action.setBadgeBackgroundColor({ color: "#ff9800" });
-    console.log(`[Background] Set warning badge for tab ${tabId}`);
 }
 
 function setBadgeInfo(tabId) {
     chrome.action.setBadgeText({ text: "i" });
     chrome.action.setBadgeBackgroundColor({ color: "#2196f3" });
-    console.log(`[Background] Set info badge for tab ${tabId}`);
 }
 
 function clearBadge() {
@@ -267,7 +247,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
         .filter(key => key.startsWith(`${tabId}_`));
     toRemove.forEach(key => backgroundState.popupRequests.delete(key));
 
-    console.log(`[Background] Cleaned up data for closed tab ${tabId}`);
 });
 
 // Clear badge when switching tabs (optional)
@@ -282,7 +261,6 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
 
 // Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
-    console.log("[Background] Extension starting up");
 
     // Clear any old state
     backgroundState.loginAttempts.clear();
@@ -292,22 +270,17 @@ chrome.runtime.onStartup.addListener(() => {
     // Clear badges
     clearBadge();
 
-    console.log("[Background] Startup cleanup completed");
 });
 
 // Handle extension installation/update
 chrome.runtime.onInstalled.addListener((details) => {
-    console.log("[Background] Extension installed/updated:", details.reason);
 
     if (details.reason === "install") {
-        console.log("[Background] First installation detected");
 
         // Set default storage values if needed
         chrome.storage.local.get(["username", "password"], (data) => {
             if (!data.username && !data.password) {
-                console.log("[Background] No existing credentials found - first time setup");
             } else {
-                console.log("[Background] Existing credentials detected");
             }
         });
 
@@ -323,7 +296,6 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     } else if (details.reason === "update") {
         const manifest = chrome.runtime.getManifest();
-        console.log(`[Background] Extension updated to version: ${manifest.version}`);
 
         // Clear any cached state from old version
         backgroundState.loginAttempts.clear();
@@ -361,7 +333,6 @@ setInterval(() => {
 
         if (now - lastActivity > maxAge) {
             backgroundState.loginAttempts.delete(tabId);
-            console.log(`[Background] Cleaned up old data for tab ${tabId}`);
         }
     }
 
@@ -375,7 +346,6 @@ setInterval(() => {
     oldRequests.forEach(key => backgroundState.popupRequests.delete(key));
 
     if (oldRequests.length > 0) {
-        console.log(`[Background] Cleaned up ${oldRequests.length} old popup requests`);
     }
 
 }, 300000); // Run every 5 minutes
@@ -386,19 +356,17 @@ setInterval(() => {
 
 // Handle unhandled errors
 self.addEventListener('error', (event) => {
-    console.error("[Background] Unhandled error:", event.error);
+    // console.error("[Background] Unhandled error:", event.error);
 });
 
 self.addEventListener('unhandledrejection', (event) => {
-    console.error("[Background] Unhandled promise rejection:", event.reason);
+    // console.error("[Background] Unhandled promise rejection:", event.reason);
 });
 
 // ===============================
 // INITIALIZATION COMPLETE
 // ===============================
 
-console.log("[Background] Smart Auto-Login Extension - Background Script Initialized");
-console.log("[Background] 🛡️ Features: Enhanced Protection, Smart Detection, Auto-Recovery");
 
 // Initial state setup
 backgroundState.extensionStartTime = Date.now();
