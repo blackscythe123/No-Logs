@@ -1,25 +1,22 @@
-
-// ===============================
-// SMART AUTO-LOGIN EXTENSION
-// Complete Background Script
-// ===============================
-
 const backgroundState = {
-    loginAttempts: new Map(), // tabId -> attempt info
-    popupRequests: new Set(), // track popup requests
+    loginAttempts: new Map(),
+    popupRequests: new Set(),
     extensionStartTime: Date.now()
 };
 
-// ===============================
-// MESSAGE HANDLING
-// ===============================
+// Check if URL is a login page
+function isLoginPage(url) {
+    return url.includes('/login') || url.includes('/login/index.php');
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-
     try {
         switch (message.type) {
             case "showPopup":
-                handleShowPopupRequest(message, sender);
+                // Only handle popup requests for login pages
+                if (sender.tab && isLoginPage(sender.tab.url)) {
+                    handleShowPopupRequest(message, sender);
+                }
                 sendResponse({ success: true });
                 break;
 
@@ -53,26 +50,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ success: false, error: "Unknown message type" });
         }
     } catch (error) {
-        // console.error("[Background] Error handling message:", error);
         sendResponse({ success: false, error: error.message });
     }
 
-    return true; // Keep message channel open for async responses
+    return true;
 });
-
-// ===============================
-// POPUP MANAGEMENT
-// ===============================
 
 function handleShowPopupRequest(message, sender) {
     if (!sender.tab) {
         return;
     }
 
+    // Double-check that we're only showing popups for login pages
+    if (!isLoginPage(sender.tab.url)) {
+        return;
+    }
+
     const tabId = sender.tab.id;
     const requestKey = `${tabId}_${Date.now()}`;
 
-    // Avoid duplicate popup requests within 3 seconds
     const recentRequests = Array.from(backgroundState.popupRequests)
         .filter(key => key.startsWith(`${tabId}_`))
         .filter(key => Date.now() - parseInt(key.split('_')[1]) < 3000);
@@ -83,12 +79,10 @@ function handleShowPopupRequest(message, sender) {
 
     backgroundState.popupRequests.add(requestKey);
 
-    // Clean up old requests
     setTimeout(() => {
         backgroundState.popupRequests.delete(requestKey);
     }, 10000);
 
-    // Update attempt tracking
     const attemptInfo = backgroundState.loginAttempts.get(tabId) || {
         count: 0,
         lastAttempt: null,
@@ -106,8 +100,6 @@ function handleShowPopupRequest(message, sender) {
 
     backgroundState.loginAttempts.set(tabId, attemptInfo);
 
-
-    // Show appropriate badge and notification
     if (message.success) {
         setBadgeSuccess(tabId);
     } else if (message.alreadyLoggedIn) {
@@ -118,17 +110,14 @@ function handleShowPopupRequest(message, sender) {
         setBadgeError(tabId);
     }
 
-    // Try to open popup automatically
     try {
         chrome.action.openPopup().catch(error => {
-
-            // Fallback: Show notification
-            if (chrome.notifications) {
+            if (chrome.notifications && isLoginPage(sender.tab.url)) {
                 showFallbackNotification(message.reason || 'Click extension icon for login options');
             }
         });
     } catch (error) {
-        if (chrome.notifications) {
+        if (chrome.notifications && isLoginPage(sender.tab.url)) {
             showFallbackNotification(message.reason || 'Click extension icon for login options');
         }
     }
@@ -144,17 +133,11 @@ function showFallbackNotification(message) {
     });
 }
 
-// ===============================
-// LOGIN RESULT HANDLING
-// ===============================
-
 function handleLoginSuccess(message, sender) {
     if (!sender.tab) return;
 
     const tabId = sender.tab.id;
 
-
-    // Update tracking
     const attemptInfo = backgroundState.loginAttempts.get(tabId) || { 
         count: 0, 
         lastAttempt: null, 
@@ -167,14 +150,11 @@ function handleLoginSuccess(message, sender) {
 
     backgroundState.loginAttempts.set(tabId, attemptInfo);
 
-    // Set success badge
     setBadgeSuccess(tabId);
 
-    // Clear error indicators after delay
     setTimeout(() => {
         chrome.action.setBadgeText({ text: "" });
     }, 5000);
-
 }
 
 function handleLoginFailure(message, sender) {
@@ -182,8 +162,6 @@ function handleLoginFailure(message, sender) {
 
     const tabId = sender.tab.id;
 
-
-    // Update tracking
     const attemptInfo = backgroundState.loginAttempts.get(tabId) || { 
         count: 0, 
         lastAttempt: null, 
@@ -200,14 +178,8 @@ function handleLoginFailure(message, sender) {
 
     backgroundState.loginAttempts.set(tabId, attemptInfo);
 
-    // Set error badge
     setBadgeError(tabId, attemptInfo.count);
-
 }
-
-// ===============================
-// BADGE MANAGEMENT
-// ===============================
 
 function setBadgeSuccess(tabId) {
     chrome.action.setBadgeText({ text: "✓" });
@@ -234,57 +206,28 @@ function clearBadge() {
     chrome.action.setBadgeText({ text: "" });
 }
 
-// ===============================
-// TAB MANAGEMENT
-// ===============================
-
-// Clean up data when tabs are closed
 chrome.tabs.onRemoved.addListener((tabId) => {
     backgroundState.loginAttempts.delete(tabId);
 
-    // Clean up popup requests for this tab
     const toRemove = Array.from(backgroundState.popupRequests)
         .filter(key => key.startsWith(`${tabId}_`));
     toRemove.forEach(key => backgroundState.popupRequests.delete(key));
-
 });
 
-// Clear badge when switching tabs (optional)
-chrome.tabs.onActivated.addListener((activeInfo) => {
-    // Optional: Clear badge when switching tabs
-    // clearBadge();
-});
-
-// ===============================
-// EXTENSION LIFECYCLE
-// ===============================
-
-// Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
-
-    // Clear any old state
     backgroundState.loginAttempts.clear();
     backgroundState.popupRequests.clear();
     backgroundState.extensionStartTime = Date.now();
-
-    // Clear badges
     clearBadge();
-
 });
 
-// Handle extension installation/update
 chrome.runtime.onInstalled.addListener((details) => {
-
     if (details.reason === "install") {
-
-        // Set default storage values if needed
         chrome.storage.local.get(["username", "password"], (data) => {
             if (!data.username && !data.password) {
-            } else {
             }
         });
 
-        // Show welcome notification
         if (chrome.notifications) {
             chrome.notifications.create({
                 type: 'basic',
@@ -297,12 +240,10 @@ chrome.runtime.onInstalled.addListener((details) => {
     } else if (details.reason === "update") {
         const manifest = chrome.runtime.getManifest();
 
-        // Clear any cached state from old version
         backgroundState.loginAttempts.clear();
         backgroundState.popupRequests.clear();
         backgroundState.extensionStartTime = Date.now();
 
-        // Show update notification
         if (chrome.notifications) {
             chrome.notifications.create({
                 type: 'basic',
@@ -314,16 +255,10 @@ chrome.runtime.onInstalled.addListener((details) => {
     }
 });
 
-// ===============================
-// MAINTENANCE & CLEANUP
-// ===============================
-
-// Periodic cleanup of old data
 setInterval(() => {
     const now = Date.now();
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const maxAge = 24 * 60 * 60 * 1000;
 
-    // Clean up old attempt data
     for (const [tabId, attemptInfo] of backgroundState.loginAttempts.entries()) {
         const lastActivity = Math.max(
             attemptInfo.lastAttempt || 0,
@@ -336,38 +271,23 @@ setInterval(() => {
         }
     }
 
-    // Clean up old popup requests
     const oldRequests = Array.from(backgroundState.popupRequests)
         .filter(requestKey => {
             const timestamp = parseInt(requestKey.split('_')[1]);
-            return now - timestamp > 300000; // 5 minutes
+            return now - timestamp > 300000;
         });
 
     oldRequests.forEach(key => backgroundState.popupRequests.delete(key));
 
-    if (oldRequests.length > 0) {
-    }
+}, 300000);
 
-}, 300000); // Run every 5 minutes
-
-// ===============================
-// ERROR HANDLING
-// ===============================
-
-// Handle unhandled errors
 self.addEventListener('error', (event) => {
-    // console.error("[Background] Unhandled error:", event.error);
+    // Silent error handling
 });
 
 self.addEventListener('unhandledrejection', (event) => {
-    // console.error("[Background] Unhandled promise rejection:", event.reason);
+    // Silent error handling
 });
 
-// ===============================
-// INITIALIZATION COMPLETE
-// ===============================
-
-
-// Initial state setup
 backgroundState.extensionStartTime = Date.now();
 clearBadge();

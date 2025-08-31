@@ -1,6 +1,6 @@
 
 // ===============================
-// SMART AUTO-LOGIN EXTENSION
+// No Logs EXTENSION
 // Final Popup Script - Auto-Refresh After Credential Updates
 // ===============================
 
