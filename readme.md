@@ -1,12 +1,12 @@
-# 🛡️ Smart Auto-Login - Privacy-First Chrome Extension
+# 🛡️ No Logs - Privacy-First Chrome Extension
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-blue.svg)](https://chrome.google.com/webstore)
-[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen.svg)](https://github.com/yourusername/smart-auto-login)
+[![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen.svg)](https://github.com/blackscythe123/No-Logs)
 
 ## 🎯 **No Logs, Maximum Privacy**
 
-Smart Auto-Login is a privacy-focused Chrome extension that provides secure automatic login functionality **without storing any logs or tracking user activity**. Built for students and privacy-conscious users who want convenience without compromising security.
+No Logs is a privacy-focused Chrome extension that provides secure automatic login functionality **without storing any logs or tracking user activity**. Built for students and privacy-conscious users who want convenience without compromising security.
 
 ## ✨ **Key Features**
 
@@ -41,8 +41,8 @@ Smart Auto-Login is a privacy-focused Chrome extension that provides secure auto
 ### **For Developers**
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/smart-auto-login.git
-   cd smart-auto-login
+   git clone https://github.com/blackscythe123/No-Logs.git
+   cd No-Logs
    ```
 
 2. Load extension in Chrome:
@@ -53,12 +53,12 @@ Smart Auto-Login is a privacy-focused Chrome extension that provides secure auto
 
 ### **For End Users**
 - Install from Chrome Web Store (coming soon)
-- Or download the latest release from [Releases](https://github.com/yourusername/smart-auto-login/releases)
+- Or download the latest release from [Releases](https://github.com/blackscythe123/No-Logs/releases)
 
 ## 🏗️ **Project Structure**
 
 ```
-smart-auto-login/
+No-Logs/
 ├── manifest.json          # Extension configuration
 ├── content.js             # Main login logic
 ├── popup.html             # User interface
@@ -162,7 +162,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### **For Students**
 - 💬 **GitHub Discussions** - Ask questions and share ideas
 - 🐛 **Issues** - Report bugs or request features
-- 📧 **Email** - youremail@college.edu (replace with your email)
+- 📧 **Email** - simiyonvinscentsamuel2470059@ssn.edu.in
 
 ### **For Developers**
 - 📖 **Chrome Extension Docs** - [developer.chrome.com](https://developer.chrome.com/docs/extensions/)
@@ -186,8 +186,8 @@ If you find this extension useful for your studies or projects, please ⭐ star 
 **Made with ❤️ for students who value privacy and smart automation!**
 
 <!-- Badges -->
-![GitHub stars](https://img.shields.io/github/stars/yourusername/smart-auto-login?style=social)
-![GitHub forks](https://img.shields.io/github/forks/yourusername/smart-auto-login?style=social)
-![GitHub issues](https://img.shields.io/github/issues/yourusername/smart-auto-login)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/yourusername/smart-auto-login)
-![Last commit](https://img.shields.io/github/last-commit/yourusername/smart-auto-login)
+![GitHub stars](https://img.shields.io/github/stars/blackscythe123/No-Logs?style=social)
+![GitHub forks](https://img.shields.io/github/forks/blackscythe123/No-Logs?style=social)
+![GitHub issues](https://img.shields.io/github/issues/blackscythe123/No-Logs)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/blackscythe123/No-Logs)
+![Last commit](https://img.shields.io/github/last-commit/blackscythe123/No-Logs)
